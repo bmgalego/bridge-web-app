@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useRecoilState, useRecoilValue } from 'recoil'
 import { ethers } from 'ethers'
 
-import { COLOR, WALLET, STYLE } from 'consts'
+import { COLOR, STYLE } from 'consts'
 
 import useAuth from 'hooks/useAuth'
 import Button from 'components/Button'
@@ -22,8 +22,7 @@ import SendStore from 'store/SendStore'
 
 import { WalletEnum } from 'types/wallet'
 import { BlockChainType } from 'types/network'
-
-const { walletLogo } = WALLET
+import WalletLogo from 'components/WalletLogo'
 
 const StyledContainer = styled.div`
   padding: 0 25px 40px;
@@ -95,6 +94,7 @@ const SelectEtherBaseWalletModal = (): ReactElement => {
     try {
       const { address, provider } = await walletConnectService.connect()
       provider.on('disconnect', () => {
+        provider.disconnect()
         logout()
       })
       await login({
@@ -130,29 +130,29 @@ const SelectEtherBaseWalletModal = (): ReactElement => {
     fromBlockChain === BlockChainType.ethereum
       ? [
           {
-            src: walletLogo[WalletEnum.MetaMask],
+            logo: <WalletLogo walleEnum={WalletEnum.MetaMask} />,
             label: 'Metamask',
             onClick: onClickMetamask,
           },
           {
-            src: walletLogo[WalletEnum.WalletConnect],
+            logo: <WalletLogo walleEnum={WalletEnum.WalletConnect} />,
             label: 'WalletConnect',
             onClick: onClickWalletConnect,
           },
           {
-            src: walletLogo[WalletEnum.CoinbaseWallet],
+            logo: <WalletLogo walleEnum={WalletEnum.CoinbaseWallet} />,
             label: 'Coinbase Wallet',
             onClick: onClickCoinbase,
           },
         ]
       : [
           {
-            src: walletLogo[WalletEnum.Binance],
+            logo: <WalletLogo walleEnum={WalletEnum.Binance} />,
             label: 'BinanceChain',
             onClick: onClickBinanceChain,
           },
           {
-            src: walletLogo[WalletEnum.MetaMask],
+            logo: <WalletLogo walleEnum={WalletEnum.MetaMask} />,
             label: 'Metamask',
             onClick: onClickMetamask,
           },
@@ -194,7 +194,7 @@ const SelectEtherBaseWalletModal = (): ReactElement => {
       header={<Text style={{ justifyContent: 'center' }}>Connect Wallet</Text>}
     >
       <StyledContainer>
-        {buttons.map(({ src, label, onClick }) => (
+        {buttons.map(({ logo, label, onClick }) => (
           <Fragment key={label}>
             <StyledWalletButton
               onClick={(): void => {
@@ -204,7 +204,7 @@ const SelectEtherBaseWalletModal = (): ReactElement => {
             >
               <StyledButtonContents>
                 <span>{label}</span>
-                <img src={src} width={24} height={24} alt="" />
+                {logo}
               </StyledButtonContents>
             </StyledWalletButton>
           </Fragment>

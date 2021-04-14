@@ -42,7 +42,7 @@ const BlockChainNetwork = (): ReactElement => {
     setInitPage(true)
     const { lastFromBlockChain } = getLoginStorage()
 
-    if (lastFromBlockChain) {
+    if (false === isLoggedIn && lastFromBlockChain) {
       // default network is terra
       if (lastFromBlockChain === BlockChainType.terra) {
         selectWallet.open()

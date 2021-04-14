@@ -1,7 +1,8 @@
-import { ReactElement, useCallback, useRef } from 'react'
+import { ReactElement, useCallback, useEffect, useRef } from 'react'
 import styled from 'styled-components'
-import { useRecoilState } from 'recoil'
+import { useRecoilState, useRecoilValue } from 'recoil'
 import { InfoCircleFill } from 'react-bootstrap-icons'
+import _ from 'lodash'
 
 import loading from 'images/loading.gif'
 import failed from 'images/failed.gif'
@@ -22,6 +23,7 @@ import SendFormButton from './SendFormButton'
 import BlockChainNetwork from './BlockChainNetwork'
 import FormImage from 'components/FormImage'
 import FinishButton from './FinishButton'
+import AuthStore from 'store/AuthStore'
 
 const StyledProcessCircle = styled.div`
   height: 128px;
@@ -74,6 +76,7 @@ const Send = (): ReactElement => {
   const formScrollView = useRef<HTMLDivElement>(null)
 
   const [status, setStatus] = useRecoilState(SendProcessStore.sendProcessStatus)
+  const isLoggedIn = useRecoilValue(AuthStore.isLoggedIn)
 
   const { validateFee } = useSendValidate()
   const feeValidationResult = validateFee()
@@ -119,8 +122,18 @@ const Send = (): ReactElement => {
 
   const onClickGoBackToSendInputButton = async (): Promise<void> => {
     setStatus(ProcessStatus.Input)
-    formScrollView.current?.scrollTo({ left: 0, behavior: 'smooth' })
   }
+
+  useEffect(() => {
+    const scroll = formScrollView.current
+    if (scroll) {
+      if (status === ProcessStatus.Input) {
+        scroll.scrollTo({ left: 0, behavior: 'smooth' })
+      } else if (status === ProcessStatus.Confirm) {
+        scroll.scrollTo({ left: 600, behavior: 'smooth' })
+      }
+    }
+  }, [status])
 
   return (
     <StyledContainer>
@@ -131,7 +144,7 @@ const Send = (): ReactElement => {
         </StyledMoblieInfoBox>
       )}
 
-      <StyledForm>
+      <StyledForm key={_.toString(isLoggedIn)}>
         {/* FormTitle */}
         <FormTitle
           onClickGoBackToSendInputButton={onClickGoBackToSendInputButton}
@@ -143,7 +156,7 @@ const Send = (): ReactElement => {
         {[ProcessStatus.Done, ProcessStatus.Failed].includes(status) ? (
           <>
             <Finish />
-            <FinishButton formScrollView={formScrollView} />
+            <FinishButton />
           </>
         ) : (
           <>
@@ -159,11 +172,12 @@ const Send = (): ReactElement => {
               </div>
             </div>
 
-            {[ProcessStatus.Input, ProcessStatus.Confirm].includes(status) && (
-              <SendFormButton
-                formScrollView={formScrollView}
-                feeValidationResult={feeValidationResult}
-              />
+            {[
+              ProcessStatus.Input,
+              ProcessStatus.Submit,
+              ProcessStatus.Confirm,
+            ].includes(status) && (
+              <SendFormButton feeValidationResult={feeValidationResult} />
             )}
           </>
         )}

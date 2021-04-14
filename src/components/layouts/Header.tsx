@@ -3,7 +3,7 @@ import styled from 'styled-components'
 import { useRecoilValue } from 'recoil'
 import { Dropdown } from 'react-bootstrap'
 
-import { COLOR, WALLET, UTIL, STYLE } from 'consts'
+import { COLOR, UTIL, STYLE } from 'consts'
 
 import { Container, Text } from 'components'
 
@@ -12,11 +12,10 @@ import useSelectWallet from 'hooks/useSelectWallet'
 
 import AuthStore from 'store/AuthStore'
 import NetworkStore from 'store/NetworkStore'
-import FormImage from 'components/FormImage'
 
 import bridgeLogo from 'images/bridge_logo.png'
+import WalletLogo from 'components/WalletLogo'
 
-const { walletLogo } = WALLET
 const StyledContainer = styled(Container)`
   max-width: 640px;
 `
@@ -142,9 +141,9 @@ const LoginUserInfo = (): ReactElement => {
     <StyledDropdown>
       <Dropdown.Toggle as={CustomToggle}>
         <StyledLoginUserInfoBox>
-          <FormImage
+          <WalletLogo
             style={{ marginRight: 5 }}
-            src={walletLogo[loginUser.walletType]}
+            walleEnum={loginUser.walletType}
             size={16}
           />
           <StyledAddress>{UTIL.truncate(loginUser.address)}</StyledAddress>

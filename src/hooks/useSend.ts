@@ -9,9 +9,11 @@ import {
   StdFee,
   LCDClient,
   Coin,
+  CreateTxOptions,
 } from '@terra-money/terra.js'
 import _ from 'lodash'
 import BigNumber from 'bignumber.js'
+import { isMobile } from 'react-device-detect'
 
 import { UTIL } from 'consts'
 
@@ -86,17 +88,15 @@ const useSend = (): UseSendType => {
   const { getEtherBaseContract } = useEtherBaseContract()
 
   const getGasPricesFromServer = async (): Promise<void> => {
-    if (terraExt && terraExt.fcd) {
-      const { data } = await axios.get('/v1/txs/gas_prices', {
-        baseURL: terraExt.fcd,
-      })
-      setGasPricesFromServer(data)
-    }
+    const { data } = await axios.get('/v1/txs/gas_prices', {
+      baseURL: terraLocal.fcd,
+    })
+    setGasPricesFromServer(data)
   }
 
   useEffect(() => {
     getGasPricesFromServer()
-  }, [terraExt])
+  }, [terraLocal])
 
   const initSendData = (): void => {
     setAsset(undefined)
@@ -117,7 +117,7 @@ const useSend = (): UseSendType => {
     if (terraExt) {
       const lcd = new LCDClient({
         chainID: terraExt.chainID,
-        URL: terraExt.lcd,
+        URL: terraLocal.lcd,
         gasPrices: { [_feeDenom]: gasPricesFromServer[_feeDenom] },
       })
       // tax
@@ -141,7 +141,7 @@ const useSend = (): UseSendType => {
           try {
             const lcd = new LCDClient({
               chainID: terraExt.chainID,
-              URL: terraExt.lcd,
+              URL: terraLocal.lcd,
               gasPrices: { [denom]: gasPricesFromServer[denom] },
             })
             // fee + tax
@@ -190,6 +190,7 @@ const useSend = (): UseSendType => {
   }
 
   const submitRequestTxFromTerra = async (): Promise<RequestTxResultType> => {
+    let errorMessage
     const memoOrToAddress =
       toBlockChain === BlockChainType.terra
         ? // only terra network can get user's memo
@@ -197,24 +198,73 @@ const useSend = (): UseSendType => {
         : // if send to ether-base then memo must be to-address
           toAddress
     const msgs = getTerraMsgs()
-    const result = await terraService.post({
-      msgs,
-      memo: memoOrToAddress,
-      gasPrices: { [feeDenom]: gasPricesFromServer[feeDenom] },
-      fee,
-    })
 
-    if (result.success && result.result) {
-      return {
-        success: true,
-        hash: result.result.txhash,
+    if (loginUser.walletConnect) {
+      const tx: CreateTxOptions = {
+        gasPrices: [new Coin(feeDenom, gasPricesFromServer[feeDenom])],
+        msgs,
+        fee,
       }
+
+      const sendId = Date.now()
+      const params = [
+        {
+          msgs: tx.msgs.map((msg) => msg.toJSON()),
+          fee: tx.fee?.toJSON(),
+          memo: tx.memo,
+          gasPrices: tx.gasPrices?.toString(),
+          gasAdjustment: tx.gasAdjustment?.toString(),
+          account_number: tx.account_number,
+          sequence: tx.sequence,
+          feeDenoms: tx.feeDenoms,
+        },
+      ]
+
+      if (isMobile) {
+        window.open(
+          `terrastation://wallet_connect_confirm?id=${sendId}&params=${JSON.stringify(
+            params
+          )}`
+        )
+      }
+
+      try {
+        const result = await loginUser.walletConnect.sendCustomRequest({
+          id: sendId,
+          method: 'send',
+          params,
+        })
+        return {
+          success: true,
+          hash: result.txhash,
+        }
+      } catch (error) {
+        return {
+          success: false,
+          errorMessage: _.toString(error),
+        }
+      }
+    } else {
+      const result = await terraService.post({
+        msgs,
+        memo: memoOrToAddress,
+        gasPrices: { [feeDenom]: gasPricesFromServer[feeDenom] },
+        fee,
+      })
+
+      if (result.success && result.result) {
+        return {
+          success: true,
+          hash: result.result.txhash,
+        }
+      }
+      errorMessage =
+        result.error?.code === 1 ? 'Denied by the user' : result.error?.message
     }
 
     return {
       success: false,
-      errorMessage:
-        result.error?.code === 1 ? 'Denied by the user' : result.error?.message,
+      errorMessage,
     }
   }
 
